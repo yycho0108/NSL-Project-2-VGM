@@ -17,23 +17,22 @@
 #define VIT (6)
 #define PIT (8)
 #define INCH (0.0254f)
-#define MAX_FORCE (1000.0f)
+#define MAX_FORCE (100000.0f)
 #define GRAVITY (9.81f)
 
 #define RAD 0.001f
 
 #define LENGTH 100
 #define HEIGHT 80
-#define P_N LENGTH*F
 
 // parameters
-#define GAMMA (16.0f)
+//#define GAMMA (8.35f)
 #define F (7) // 2 ~ 14
 
 #define AMP (0.003f) // 0.002f ~ 0.006f
-#define FREQ sqrt(GAMMA*GRAVITY/(4.0f*M_PI*M_PI*AMP))
-
-//*AMP*M_PI*M_PI*FREQ*FREQ/GRAVITY
+//#define FREQ sqrt(GAMMA*GRAVITY/(4.0f*M_PI*M_PI*AMP))
+#define FREQ (15.0f) // <<- override GAMMA
+#define GAMMA (4.0f*M_PI*M_PI*AMP*FREQ*FREQ/GRAVITY)
 
 b2World* m_world;
 b2PrismaticJoint* m_vjoint;
@@ -47,7 +46,7 @@ void loop(){
 	glViewport(0,0,w,h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	LoadOrtho2DMatrix(-0.2, 0.2, -0.2, 0.2);
+	LoadOrtho2DMatrix(-0.1, 0.1, -0.1, 0.1);
 
 	//for(int32 i=0; i<6000; ++i){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -58,12 +57,14 @@ void loop(){
 
 	m_vjoint->SetMotorSpeed(AMP * omega * sin(omega*current_time));
 
-	m_world->Step(DT, VIT, PIT);
-	current_time += DT;
+	float dt = current_time < 2.0? DT : DT*0.1;
+	std::cout << current_time	<< std::endl;
+	//std::cout << current_time << std::endl;
+	m_world->Step(dt, VIT, PIT);
+	current_time += dt;
 
 	m_world->DrawDebugData();
 	glutSwapBuffers();
-
 }
 
 static void Timer(int)
@@ -78,11 +79,11 @@ float randf(){
 }
 
 b2PrismaticJoint* createContainer(
-		float length=0.100f,
-		float height=0.080f,
-		float thickness=(1.0/8.0)*INCH,
-		b2Body* groundBody=nullptr,
-		float groundthickness=0.0
+		float length,
+		float height,
+		float thickness,
+		b2Body* groundBody,
+		float groundthickness
 		){
 	if(!groundBody || groundthickness <= 0.0)
 		return nullptr;
@@ -185,29 +186,25 @@ int main(int argc, char* argv[]){
 	ps->SetDensity(2000.0f);
 
 	b2ParticleGroupDef pd;
-	b2CircleShape shape; //1mm
-	shape.m_radius = RAD;
-	pd.shape = &shape;
-	pd.particleCount = 100*F;
 	pd.groupFlags = b2_solidParticleGroup;// | b2_rigidParticleGroup;
+	pd.flags = b2_staticPressureParticle;
 
-	b2Vec2 pos[100*F];
-	//for(int32 i=0; i<P_N; ++i){
-	//	pos[i].Set(0.04*randf()-0.02, 0.04*randf()-0.02);
-	//	//pd.angle = (2 * M_PI) * randf() - M_PI;
-	//	//pd.angularVelocity = randf();
-	//	//ps->CreateParticleGroup(pd);
-	//}
-	
-	for(int32 i=0; i<(F*2); ++i){
-		for(int32 j=0; j<(100/2); ++j){
-			int idx = i*(100/2)+j;
-			if(idx < 100*F){
-				pos[idx].Set(2*RAD*j+1*RAD, 2*RAD*i);
-			}
+	b2Vec2 pos[LENGTH*F];
+
+	// give some clearance ... 	
+	float clr = 2.0*RAD; //2.0 spacing between particles
+	int32 n = F*LENGTH;
+	float32 x=clr, y=clr;
+	for(int32 i=0; i<n; ++i){
+		pos[i].Set(x,y);
+		x += clr;
+		if(x+clr > RAD*LENGTH){
+			x=clr;
+			y+=clr;
 		}
 	}
 
+	pd.particleCount = n;
 	pd.positionData = pos;
 	pd.angle = 0.0;
 	pd.position.Set(-0.05, 0.0);
@@ -234,7 +231,11 @@ int main(int argc, char* argv[]){
 	glutInitContextVersion(2, 0);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
-	mainWindow = glutCreateWindow("title");
+
+	char title[32];
+	sprintf(title, "VGM F=%d, f=%.2f, gamma=%.2f", F, FREQ, GAMMA);
+
+	mainWindow = glutCreateWindow(title);
 	glutSetWindow(mainWindow);
 	glutDisplayFunc(loop);
 	

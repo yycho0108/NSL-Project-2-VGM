@@ -5,13 +5,9 @@ set (CMAKE_CXX_STANDARD 11)
 add_definitions( -DFREEGLUT_EXPORTS -DFREEGLUT_STATIC
                  -DGLUT_DISABLE_ATEXIT_HACK -D_CRT_SECURE_NO_WARNINGS )
 
-
 find_package(Box2D REQUIRED)
 find_package(GLUT REQUIRED)
 find_package(OpenGL REQUIRED)
-#set(BOX2D_ROOT /home/jamiecho/libs/liquidfun/liquidfun/Box2D/Box2D)
-
-#link_directories(${BOX2D_ROOT}/Release)
 
 add_definitions     ( ${BOX2D_DEFINITIONS} )
 include_directories ( ${BOX2D_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIR} )
