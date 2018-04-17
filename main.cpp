@@ -13,7 +13,7 @@
 #include <iostream>
 
 #define DT (1.0f/600.0f)
-#define MSPF (16)
+#define MSPF (1)
 #define VIT (6)
 #define PIT (8)
 #define INCH (0.0254f)
@@ -35,26 +35,39 @@
 //#define FREQ sqrt(GAMMA*GRAVITY/(4.0f*M_PI*M_PI*AMP))
 #define FREQ (15.0f) // <<- override GAMMA
 #define GAMMA (4.0f*M_PI*M_PI*AMP*FREQ*FREQ/GRAVITY)
+#define max(a,b) (((a)>(b))?(a):(b))
 
 b2World* m_world;
 b2PrismaticJoint* m_vjoint;
 int32 mainWindow;
 float32 current_time=0;
 float32 dt = DT;
+int32 mspf = 16;
+
 bool pause=true;
+bool draw=true;
 
 void key(unsigned char k, int, int){
 	switch(k){
+		case 'd':
+			draw=!draw;
+			break;
 		case 'p':
 			pause=!pause;
 			break;
 		case 's':
+			mspf *= 2;
 			//slow
-			dt *= 0.5;
+			//dt *= 0.5;
 			break;
 		case 'f':
-			dt *= 2.0;
+			mspf = max(mspf/2,1);
+			//mspf /= 2;
+			//mspf = mspf<1?1:mspf; // min
 			break;
+		case 'q':
+			glutDestroyWindow(mainWindow);
+			exit(0);
 		default:
 			break;
 	}
@@ -80,11 +93,14 @@ void loop(){
 
 	if(!pause){
 		m_vjoint->SetMotorSpeed(AMP * omega * sin(omega*current_time));
+		std::cout << current_time << ',' << m_vjoint->GetJointTranslation() << std::endl;
 		m_world->Step(dt, VIT, PIT);
 		current_time += dt;
 	}
+	if(draw){
+		m_world->DrawDebugData();
+	}
 
-	m_world->DrawDebugData();
 	glutSwapBuffers();
 }
 
@@ -92,7 +108,7 @@ static void Timer(int)
 {
 	glutSetWindow(mainWindow);
 	glutPostRedisplay();
-	glutTimerFunc(MSPF, Timer, 0);
+	glutTimerFunc(mspf, Timer, 0);
 }
 
 float randf(){
@@ -214,7 +230,6 @@ int main(int argc, char* argv[]){
 
 	// give some clearance ... 	
 	float clr = 1.0*DIAMETER; //2.0 spacing between particles
-	std::cout << "CLR: " << clr << std::endl;
 	int32 n = F*LENGTH;
 	float32 x=clr, y=clr;
 	for(int32 i=0; i<n; ++i){
@@ -273,7 +288,7 @@ int main(int argc, char* argv[]){
 	m_debugDraw.SetFlags(flags);
 	m_world->SetDebugDraw(&m_debugDraw);
 	
-	glutTimerFunc(MSPF, Timer, 0);
+	glutTimerFunc(mspf, Timer, 0);
 	glutMainLoop();
 
 	delete m_world;
