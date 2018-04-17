@@ -125,9 +125,19 @@ void DebugDraw::DrawCircle(const b2Vec2& center, float32 radius, const b2Color& 
 }
 
 float smoothstep(float x) { return x * x * (3 - 2 * x); }
-
 void DebugDraw::DrawParticles(const b2Vec2 *centers, float32 radius, const b2ParticleColor *colors, int32 count)
 {
+	//b2Vec2 tax(1.0, 0.0);
+	//b2Color col(1.0f,1.0f,1.0f);
+
+	//for(int32 i=0; i<count; ++i){
+	//	if(colors){
+	//		col = colors[i].GetColor();
+	//	}
+	//	DebugDraw::DrawSolidCircle(centers[i], radius, tax, col);
+	//}
+	//return;
+
 	static unsigned int particle_texture = 0;
 
 	if (!particle_texture ||

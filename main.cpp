@@ -20,14 +20,16 @@
 #define MAX_FORCE (100000.0f)
 #define GRAVITY (9.81f)
 
-#define RAD 0.001f
+#define DIAMETER (0.001f)
+#define RAD (DIAMETER/2.0f)
 
 #define LENGTH 100
 #define HEIGHT 80
+#define WALL (1.0f/8.0f*INCH)
 
 // parameters
 //#define GAMMA (8.35f)
-#define F (7) // 2 ~ 14
+#define F (14) // 2 ~ 14
 
 #define AMP (0.003f) // 0.002f ~ 0.006f
 //#define FREQ sqrt(GAMMA*GRAVITY/(4.0f*M_PI*M_PI*AMP))
@@ -38,15 +40,36 @@ b2World* m_world;
 b2PrismaticJoint* m_vjoint;
 int32 mainWindow;
 float32 current_time=0;
+float32 dt = DT;
+bool pause=true;
+
+void key(unsigned char k, int, int){
+	switch(k){
+		case 'p':
+			pause=!pause;
+			break;
+		case 's':
+			//slow
+			dt *= 0.5;
+			break;
+		case 'f':
+			dt *= 2.0;
+			break;
+		default:
+			break;
+	}
+}
 
 void loop(){
 	int w = glutGet(GLUT_WINDOW_WIDTH);
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
 
 	glViewport(0,0,w,h);
+	float a = float(h) / w;
+	float s = 0.12f;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	LoadOrtho2DMatrix(-0.1, 0.1, -0.1, 0.1);
+	LoadOrtho2DMatrix(-s, s, -s*a, s*a);
 
 	//for(int32 i=0; i<6000; ++i){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -55,13 +78,11 @@ void loop(){
 
 	float omega = 2*M_PI*FREQ; // angular freq.
 
-	m_vjoint->SetMotorSpeed(AMP * omega * sin(omega*current_time));
-
-	float dt = current_time < 2.0? DT : DT*0.1;
-	std::cout << current_time	<< std::endl;
-	//std::cout << current_time << std::endl;
-	m_world->Step(dt, VIT, PIT);
-	current_time += dt;
+	if(!pause){
+		m_vjoint->SetMotorSpeed(AMP * omega * sin(omega*current_time));
+		m_world->Step(dt, VIT, PIT);
+		current_time += dt;
+	}
 
 	m_world->DrawDebugData();
 	glutSwapBuffers();
@@ -192,13 +213,14 @@ int main(int argc, char* argv[]){
 	b2Vec2 pos[LENGTH*F];
 
 	// give some clearance ... 	
-	float clr = 2.0*RAD; //2.0 spacing between particles
+	float clr = 1.0*DIAMETER; //2.0 spacing between particles
+	std::cout << "CLR: " << clr << std::endl;
 	int32 n = F*LENGTH;
 	float32 x=clr, y=clr;
 	for(int32 i=0; i<n; ++i){
 		pos[i].Set(x,y);
 		x += clr;
-		if(x+clr > RAD*LENGTH){
+		if(x+clr > DIAMETER*LENGTH){
 			x=clr;
 			y+=clr;
 		}
@@ -212,20 +234,20 @@ int main(int argc, char* argv[]){
 	ps->CreateParticleGroup(pd);
 
 	b2BodyDef groundBodyDef;
-	groundBodyDef.position.Set(0.0f,-0.080f-0.002f);
+	groundBodyDef.position.Set(0.0f,-0.050f-WALL);
 	b2PolygonShape groundBox;
 
-	groundBox.SetAsBox(0.050f, 0.002f); //50cm, 10cm
+	groundBox.SetAsBox(0.050f, WALL); //50cm, 10cm
 
 	b2Body* groundBody = m_world->CreateBody(&groundBodyDef);
 	groundBody->CreateFixture(&groundBox, 4000.0f);
 
 	// container ..
 	m_vjoint = createContainer(
-			LENGTH*RAD,
-			HEIGHT*RAD,
-			(1.0/8.0)*INCH,
-			groundBody, 0.002f);
+			LENGTH*DIAMETER,
+			HEIGHT*DIAMETER,
+			WALL,
+			groundBody, WALL);
 
 	glutInit(&argc, argv);
 	glutInitContextVersion(2, 0);
@@ -238,6 +260,8 @@ int main(int argc, char* argv[]){
 	mainWindow = glutCreateWindow(title);
 	glutSetWindow(mainWindow);
 	glutDisplayFunc(loop);
+	glutKeyboardFunc(key);
+
 	
 	uint32 flags = 0;
 	flags |= b2Draw::e_shapeBit;
