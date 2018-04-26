@@ -12,7 +12,7 @@
 #include "Render.h"
 #include <iostream>
 
-#define DT (1.0f/600.0f)
+#define DT (1.0f/613.0f)
 #define MSPF (1)
 #define VIT (6)
 #define PIT (8)
@@ -31,11 +31,15 @@
 //#define GAMMA (8.35f)
 #define F (14) // 2 ~ 14
 
-#define AMP (0.003f) // 0.002f ~ 0.006f
+#define AMP (0.004f) // 0.002f ~ 0.006f
 //#define FREQ sqrt(GAMMA*GRAVITY/(4.0f*M_PI*M_PI*AMP))
 #define FREQ (15.0f) // <<- override GAMMA
 #define GAMMA (4.0f*M_PI*M_PI*AMP*FREQ*FREQ/GRAVITY)
 #define max(a,b) (((a)>(b))?(a):(b))
+
+#define K_P 100.0
+#define K_I 10.0
+#define K_D 0.1
 
 b2World* m_world;
 b2PrismaticJoint* m_vjoint;
@@ -73,6 +77,38 @@ void key(unsigned char k, int, int){
 	}
 }
 
+class PID{
+	public:
+		float kp, ki, kd;
+		float ei, ed;
+	public:
+		PID(float kp, float ki, float kd):
+			kp(kp),ki(ki),kd(kd),ei(0),ed(0){}
+		void reset(){ei=0;ed=0;}
+		float operator()(float err, float dt){
+			float res =
+				kp * err +
+				ki * ei +
+				kd * (err - ed) / dt;
+
+			ed = err;
+			ei += err * dt;
+			return res;
+		}
+};
+
+PID pid(K_P, K_I, K_D);
+
+float squarewave(float f, float t, float a=1.0){
+	float p = (1.0 / f);
+	return (fmod(t, p) < (p/2.0))? a : -a;
+}
+
+float sinwave(float f, float t, float a=1.0){
+	float w = 2 * M_PI * f;
+	return a*sin(w * t);
+}
+
 void loop(){
 	int w = glutGet(GLUT_WINDOW_WIDTH);
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
@@ -89,11 +125,17 @@ void loop(){
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	float omega = 2*M_PI*FREQ; // angular freq.
-
 	if(!pause){
-		m_vjoint->SetMotorSpeed(AMP * omega * sin(omega*current_time));
-		std::cout << current_time << ',' << m_vjoint->GetJointTranslation() << std::endl;
+		float jpos = m_vjoint->GetJointTranslation();
+		//float jtgt = AMP + sinwave(FREQ, current_time, AMP);
+		float jtgt = AMP + squarewave(FREQ, current_time, AMP);
+		float jvel = pid(jtgt-jpos, dt);
+		m_vjoint->SetMotorSpeed(jvel);
+
+		//float omega = 2*M_PI*FREQ; // angular freq.
+		//m_vjoint->SetMotorSpeed(AMP * omega * sin(omega*current_time));
+		//m_vjoint->GetJointTranslation();
+		//std::cout << current_time << ',' << m_vjoint->GetJointTranslation() << std::endl;
 		m_world->Step(dt, VIT, PIT);
 		current_time += dt;
 	}
