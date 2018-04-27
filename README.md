@@ -6,6 +6,9 @@ Currently supporting semi-parametrized numerical simulation with LiquidFun
 
 [Demo Video](https://www.youtube.com/watch?v=0i7x5nwChtU)
 
+![Demo](figures/vgm_demo.png)
+
+
 ## Build:
 
 First install [LiquidFun](http://google.github.io/liquidfun/).
