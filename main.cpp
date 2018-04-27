@@ -130,6 +130,7 @@ void loop(){
 		//float jtgt = AMP + sinwave(FREQ, current_time, AMP);
 		float jtgt = AMP + squarewave(FREQ, current_time, AMP);
 		float jvel = pid(jtgt-jpos, dt);
+		std::cout << jpos << std::endl;
 		m_vjoint->SetMotorSpeed(jvel);
 
 		//float omega = 2*M_PI*FREQ; // angular freq.
